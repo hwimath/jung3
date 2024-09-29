@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>루트 표현 문제 게임</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 스타일 -->
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 0;
+        }
+        #gameTitle {
+            background-color: #2563eb;
+            color: white;
+            padding: 20px;
+            font-size: 2em;
+        }
+        #scoreBoard {
+            margin: 20px;
+            font-size: 1.2em;
+        }
+        #energyBarContainer {
+            width: 80%;
+            height: 20px;
+            background-color: #ddd;
+            margin: 0 auto;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #energyBar {
+            width: 100%;
+            height: 100%;
+            background-color: #34d399;
+            transition: width 0.1s linear;
+        }
+        #questionDisplay {
+            font-size: 2em;
+            margin: 30px;
+        }
+        #buttonsContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px;
+        }
+        .answerButton {
+            width: 40%;
+            max-width: 200px;
+            margin: 10px;
+            padding: 15px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: #fff;
+            border: 2px solid #2563eb;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        .answerButton:hover {
+            background-color: #2563eb;
+            color: #fff;
+        }
+        #resultMessage {
+            font-size: 1.5em;
+            margin: 20px;
+            height: 40px;
+        }
+        #finalScore {
+            font-size: 2em;
+            margin: 50px;
+            color: #d32f2f;
+        }
+        #startButton {
+            font-size: 1.5em;
+            padding: 15px 30px;
+            cursor: pointer;
+            background-color: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            margin-top: 30px;
+        }
+        #startButton:hover {
+            background-color: #1e40af;
+        }
+        #watermark {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 1em;
+            color: rgba(0, 0, 0, 0.3);
+            user-select: none;
+        }
+    </style>
+    <!-- MathJax 로드 -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+</head>
+<body>
+
+    <div id="gameTitle">루트 표현 문제 게임</div>
+    <div id="scoreBoard">점수: <span id="score">0</span> | 남은 기회: <span id="lives">3</span>/3</div>
+    <div id="energyBarContainer">
+        <div id="energyBar"></div>
+    </div>
+    <div id="questionDisplay"></div>
+    <div id="buttonsContainer"></div>
+    <div id="resultMessage"></div>
+    <button id="startButton">게임 시작하기</button>
+    <div id="finalScore"></div>
+
+    <!-- 워터마크 -->
+    <div id="watermark">휘매쓰</div>
+
+    <!-- 스크립트 -->
+    <script>
+        let score = 0;
+        let lives = 3;
+        let timeLimit = 40000; // 초기 제한 시간 40초
+        let timeRemaining;
+        let energyBarInterval;
+        let questionCount = 0;
+
+        const questionDisplay = document.getElementById('questionDisplay');
+        const buttonsContainer = document.getElementById('buttonsContainer');
+        const resultMessage = document.getElementById('resultMessage');
+        const finalScore = document.getElementById('finalScore');
+        const startButton = document.getElementById('startButton');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        const energyBar = document.getElementById('energyBar');
+
+        // 루트 표현 문제 50개
+        const questions = [
+            { text: '\\( \\sqrt{16} = ? \\)', answer: '4' },
+            { text: '\\( \\sqrt{25} = ? \\)', answer: '5' },
+            { text: '\\( \\sqrt{36} = ? \\)', answer: '6' },
+            { text: '\\( \\sqrt{49} = ? \\)', answer: '7' },
+            { text: '\\( \\sqrt{64} = ? \\)', answer: '8' },
+            { text: '\\( \\sqrt{81} = ? \\)', answer: '9' },
+            { text: '\\( \\sqrt{100} = ? \\)', answer: '10' },
+            { text: '\\( \\sqrt{121} = ? \\)', answer: '11' },
+            { text: '\\( \\sqrt{144} = ? \\)', answer: '12' },
+            { text: '\\( \\sqrt{169} = ? \\)', answer: '13' },
+            { text: '\\( \\sqrt{196} = ? \\)', answer: '14' },
+            { text: '\\( \\sqrt{225} = ? \\)', answer: '15' },
+            { text: '\\( \\sqrt{256} = ? \\)', answer: '16' },
+            { text: '\\( \\sqrt{289} = ? \\)', answer: '17' },
+            { text: '\\( \\sqrt{324} = ? \\)', answer: '18' },
+            { text: '\\( \\sqrt{361} = ? \\)', answer: '19' },
+            { text: '\\( \\sqrt{400} = ? \\)', answer: '20' },
+            { text: '\\( \\sqrt{441} = ? \\)', answer: '21' },
+            { text: '\\( \\sqrt{484} = ? \\)', answer: '22' },
+            { text: '\\( \\sqrt{529} = ? \\)', answer: '23' },
+            { text: '\\( \\sqrt{576} = ? \\)', answer: '24' },
+            { text: '\\( \\sqrt{625} = ? \\)', answer: '25' },
+            { text: '\\( \\sqrt{15^2} = ? \\)', answer: '15' },
+            { text: '\\( \\sqrt{20^2} = ? \\)', answer: '20' },
+            { text: '\\( \\sqrt{1} = ? \\)', answer: '1' },
+            { text: '\\( \\sqrt{9} = ? \\)', answer: '3' },
+            { text: '\\( \\sqrt{2^2} + \\sqrt{3^2} = ? \\)', answer: '5' },
+            { text: '\\( \\sqrt{5^2} + \\sqrt{12^2} = ? \\)', answer: '13' },
+            { text: '\\( \\sqrt{8^2} - \\sqrt{6^2} = ? \\)', answer: '2' },
+            { text: '\\( \\sqrt{7^2} + \\sqrt{24^2} = ? \\)', answer: '25' },
+            { text: '\\( \\sqrt{50} = ? \\)', answer: '\\( 5\\sqrt{2} \\)' },
+            { text: '\\( \\sqrt{72} = ? \\)', answer: '\\( 6\\sqrt{2} \\)' },
+            { text: '\\( \\sqrt{98} = ? \\)', answer: '\\( 7\\sqrt{2} \\)' },
+            { text: '\\( \\sqrt{128} = ? \\)', answer: '\\( 8\\sqrt{2} \\)' },
+            { text: '\\( \\sqrt{18} = ? \\)', answer: '\\( 3\\sqrt{2} \\)' },
+            { text: '\\( \\sqrt{32} = ? \\)', answer: '\\( 4\\sqrt{2} \\)' },
+            { text: '\\( \\sqrt{12} = ? \\)', answer: '\\( 2\\sqrt{3} \\)' },
+            { text: '\\( \\sqrt{27} = ? \\)', answer: '\\( 3\\sqrt{3} \\)' },
+            { text: '\\( \\sqrt{48} = ? \\)', answer: '\\( 4\\sqrt{3} \\)' },
+            { text: '\\( \\sqrt{75} = ? \\)', answer: '\\( 5\\sqrt{3} \\)' },
+            { text: '\\( \\sqrt{20} = ? \\)', answer: '\\( 2\\sqrt{5} \\)' },
+            { text: '\\( \\sqrt{45} = ? \\)', answer: '\\( 3\\sqrt{5} \\)' },
+            { text: '\\( \\sqrt{80} = ? \\)', answer: '\\( 4\\sqrt{5} \\)' },
+            { text: '\\( \\sqrt{125} = ? \\)', answer: '\\( 5\\sqrt{5} \\)' },
+            { text: '\\( \\sqrt{200} = ? \\)', answer: '\\( 10\\sqrt{2} \\)' },
+            { text: '\\( \\sqrt{2} \\times \\sqrt{8} = ? \\)', answer: '4' },
+            { text: '\\( \\sqrt{3} \\times \\sqrt{12} = ? \\)', answer: '6' },
+            { text: '\\( \\sqrt{5} \\times \\sqrt{20} = ? \\)', answer: '10' },
+            { text: '\\( \\sqrt{7} \\times \\sqrt{14} = ? \\)', answer: '14' },
+            { text: '\\( (\\sqrt{3})^2 = ? \\)', answer: '3' },
+            { text: '\\( (\\sqrt{5})^2 = ? \\)', answer: '5' }
+        ];
+
+        startButton.addEventListener('click', startGame);
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            timeLimit = 40000;
+            finalScore.textContent = '';
+            resultMessage.textContent = '';
+            startButton.style.display = 'none';
+            updateScoreBoard();
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            const selectedQuestion = questions[Math.floor(Math.random() * questions.length)];
+            questionDisplay.innerHTML = selectedQuestion.text;
+
+            const correctAnswer = selectedQuestion.answer;
+            const options = [correctAnswer];
+
+            while (options.length < 4) {
+                const wrongAnswer = generateWrongAnswer(correctAnswer);
+                if (!options.includes(wrongAnswer)) {
+                    options.push(wrongAnswer);
+                }
+            }
+
+            options.sort(() => Math.random() - 0.5);
+            buttonsContainer.innerHTML = '';
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.classList.add('answerButton');
+                button.innerHTML = option;
+                button.addEventListener('click', () => checkAnswer(option, correctAnswer));
+                buttonsContainer.appendChild(button);
+            });
+
+            // 이전 결과 메시지 지우기
+            resultMessage.textContent = '';
+
+            // 수학 식 다시 렌더링
+            MathJax.typeset();
+
+            startTimer(); // 문제마다 타이머 시작
+        }
+
+        function checkAnswer(selectedAnswer, correctAnswer) {
+            clearInterval(energyBarInterval);
+            if (selectedAnswer === correctAnswer) {
+                score += 10;
+                resultMessage.style.color = 'green';
+                resultMessage.textContent = '정답입니다!';
+            } else {
+                lives--;
+                resultMessage.style.color = 'red';
+                resultMessage.textContent = '오답입니다!';
+            }
+            updateScoreBoard();
+            if (lives > 0) {
+                setTimeout(nextQuestion, 1000);
+            } else {
+                endGame();
+            }
+        }
+
+        function startTimer() {
+            timeRemaining = timeLimit;
+            updateEnergyBar();
+            energyBarInterval = setInterval(() => {
+                timeRemaining -= 100; // 100ms마다 감소
+                updateEnergyBar();
+                if (timeRemaining <= 0) {
+                    clearInterval(energyBarInterval);
+                    lives--;
+                    resultMessage.style.color = 'red';
+                    resultMessage.textContent = '시간 초과!';
+                    updateScoreBoard();
+                    if (lives > 0) {
+                        setTimeout(nextQuestion, 1000);
+                    } else {
+                        endGame();
+                    }
+                }
+            }, 100);
+        }
+
+        function updateEnergyBar() {
+            const width = (timeRemaining / timeLimit) * 100;
+            energyBar.style.width = width + '%';
+        }
+
+        function updateScoreBoard() {
+            scoreElement.textContent = score;
+            livesElement.textContent = lives;
+        }
+
+        function endGame() {
+            buttonsContainer.innerHTML = '';
+            questionDisplay.textContent = '';
+            finalScore.textContent = `게임 종료! 총점: ${score}점`;
+            startButton.textContent = '다시 시작하기';
+            startButton.style.display = 'inline-block';
+        }
+
+        function generateWrongAnswer(correctAnswer) {
+            // 숫자인 경우
+            if (!isNaN(correctAnswer)) {
+                let wrongAnswer = parseInt(correctAnswer) + Math.floor(Math.random() * 5) - 2;
+                return wrongAnswer.toString();
+            } else {
+                // 루트 표현인 경우
+                let wrongAnswer = correctAnswer.replace(/\\sqrt\{(\d+)\}/g, function (match, p1) {
+                    let num = parseInt(p1) + Math.floor(Math.random() * 20) - 10;
+                    return `\\sqrt{${Math.abs(num)}}`;
+                });
+                return wrongAnswer;
+            }
+        }
+    </script>
+
+</body>
+</html>
